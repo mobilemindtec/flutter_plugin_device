@@ -3,16 +3,20 @@ package io.flutter.plugins.device
 import android.app.Activity
 import android.app.Application
 import android.view.WindowManager
+import io.flutter.embedding.engine.plugins.FlutterPlugin
+import io.flutter.embedding.engine.plugins.activity.ActivityAware
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
+import io.flutter.plugin.common.PluginRegistry
 import io.flutter.plugin.common.PluginRegistry.Registrar
 
 /**
  * DevicePlugin
  */
-class DevicePlugin(private val registrar: Registrar, private val channel: MethodChannel) : MethodCallHandler {
+class DevicePlugin : MethodCallHandler,  FlutterPlugin, ActivityAware {
 
 
   companion object {
@@ -34,8 +38,6 @@ class DevicePlugin(private val registrar: Registrar, private val channel: Method
     private val METHOD_SCREEN_HEIGHT_DPIS = "screenHeightDIPs"
     private val MIN_TABLET_PIXELS = 600
 
-
-
     /**
      * Plugin registration.
      */
@@ -44,21 +46,29 @@ class DevicePlugin(private val registrar: Registrar, private val channel: Method
       val channel = MethodChannel(registrar.messenger(), CHANNEL_NAME)
       channel.setMethodCallHandler(DevicePlugin(registrar, channel))
     }
+
   }
 
-  private val activity: Activity = registrar.activity()
-  private val application: Application = registrar.context() as Application
+  private constructor(registrar: PluginRegistry.Registrar, channel: MethodChannel) {
+    this.channel = channel
+    this.application = registrar.context() as Application
+    this.activity = registrar.activity()
+  }
 
+  constructor() {
+  }
+
+  private var activity: Activity? = null
+  private var application: Application? = null
+  private var channel: MethodChannel? = null
   private var methodResult: Result? = null
-
-
 
   override fun onMethodCall(call: MethodCall, result: Result) {
 
     this.methodResult = result
 
     var metrics = android.util.DisplayMetrics()
-    var window = application.getSystemService(android.content.Context.WINDOW_SERVICE) as WindowManager
+    var window = application!!.getSystemService(android.content.Context.WINDOW_SERVICE) as WindowManager
     window.defaultDisplay.getRealMetrics(metrics)
 
     when (call.method) {
@@ -79,7 +89,7 @@ class DevicePlugin(private val registrar: Registrar, private val channel: Method
         methodResult!!.success(if (dips >= MIN_TABLET_PIXELS) "Tablet" else "Phone")
       }
 
-      METHOD_UUID -> methodResult!!.success(android.provider.Settings.Secure.getString(activity.contentResolver, android.provider.Settings.Secure.ANDROID_ID))
+      METHOD_UUID -> methodResult!!.success(android.provider.Settings.Secure.getString(activity!!.contentResolver, android.provider.Settings.Secure.ANDROID_ID))
 
       METHOD_LANGUAGE -> methodResult!!.success(java.util.Locale.getDefault().language.replace("_", "-"))
 
@@ -98,6 +108,34 @@ class DevicePlugin(private val registrar: Registrar, private val channel: Method
       else -> result.notImplemented()
     }
 
+  }
+
+  override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
+    channel = MethodChannel(flutterPluginBinding.binaryMessenger, CHANNEL_NAME)
+    channel!!.setMethodCallHandler(this)
+  }
+
+  override fun onDetachedFromEngine(p0: FlutterPlugin.FlutterPluginBinding) {
+    if(channel != null)
+      channel!!.setMethodCallHandler(null)
+  }
+
+  override fun onAttachedToActivity(activityPluginBinding: ActivityPluginBinding) {
+    this.activity = activityPluginBinding.activity;
+    this.application = activityPluginBinding.activity.application;
+  }
+
+  override fun onDetachedFromActivityForConfigChanges() {
+    TODO("Not yet implemented")
+  }
+
+  override fun onReattachedToActivityForConfigChanges(p0: ActivityPluginBinding) {
+    TODO("Not yet implemented")
+  }
+
+  override fun onDetachedFromActivity() {
+    this.activity = null;
+    this.application = null;
   }
 
 }
