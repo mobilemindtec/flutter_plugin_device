@@ -10,8 +10,6 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
-import io.flutter.plugin.common.PluginRegistry
-import io.flutter.plugin.common.PluginRegistry.Registrar
 
 /**
  * DevicePlugin
@@ -38,24 +36,6 @@ class DevicePlugin : MethodCallHandler,  FlutterPlugin, ActivityAware {
     private val METHOD_SCREEN_HEIGHT_DPIS = "screenHeightDIPs"
     private val MIN_TABLET_PIXELS = 600
 
-    /**
-     * Plugin registration.
-     */
-    @JvmStatic
-    fun registerWith(registrar: Registrar) {
-      val channel = MethodChannel(registrar.messenger(), CHANNEL_NAME)
-      channel.setMethodCallHandler(DevicePlugin(registrar, channel))
-    }
-
-  }
-
-  private constructor(registrar: PluginRegistry.Registrar, channel: MethodChannel) {
-    this.channel = channel
-    this.application = registrar.context() as Application
-    this.activity = registrar.activity()
-  }
-
-  constructor() {
   }
 
   private var activity: Activity? = null
